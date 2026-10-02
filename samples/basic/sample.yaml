@@ -1,0 +1,21 @@
+sample:
+  name: Double pointer ring buffer
+  description: Zero-copy producer, primary consumer and secondary reader with rbdp shell
+common:
+  tags: ring_buf_dp
+  platform_allow:
+    - native_sim
+    - qemu_cortex_m3
+  integration_platforms:
+    - native_sim
+  harness: console
+  harness_config:
+    type: multi_line
+    ordered: false
+    regex:
+      - "producer: sent 1024 bytes"
+      - "consumer: received 1024 bytes"
+      - "monitor: observed 1024 bytes"
+      - "SAMPLE PASSED"
+tests:
+  sample.ring_buf_dp.basic: {}

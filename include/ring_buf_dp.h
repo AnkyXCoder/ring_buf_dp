@@ -127,6 +127,43 @@ uint32_t ring_buf_dp_get_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t 
  */
 int ring_buf_dp_get_finish(struct ring_buf_dp *rb, uint32_t len);
 
+/**
+ * @brief Enable the secondary reader, starting at the primary read position.
+ *
+ * While enabled, free space is bounded by the slowest of both readers.
+ *
+ * @retval 0 on success.
+ * @retval -EALREADY if it is already enabled.
+ */
+int ring_buf_dp_second_enable(struct ring_buf_dp *rb);
+
+/** @brief Disable the secondary reader; it no longer limits the free space. */
+void ring_buf_dp_second_disable(struct ring_buf_dp *rb);
+
+/**
+ * @brief Copy data out for the secondary reader and consume it from that reader only.
+ *
+ * Returns 0 if the secondary reader is disabled or a peek claim is outstanding.
+ *
+ * @return Number of bytes read.
+ */
+uint32_t ring_buf_dp_peek(struct ring_buf_dp *rb, uint8_t *data, uint32_t len);
+
+/**
+ * @brief Claim contiguous readable data for the secondary reader (zero-copy).
+ *
+ * @return Number of bytes claimed, 0 if the secondary reader is disabled.
+ */
+uint32_t ring_buf_dp_peek_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len);
+
+/**
+ * @brief Consume bytes from a region obtained with ring_buf_dp_peek_claim().
+ *
+ * @retval 0 on success.
+ * @retval -EINVAL if @p len exceeds the claimed size.
+ */
+int ring_buf_dp_peek_finish(struct ring_buf_dp *rb, uint32_t len);
+
 /** @brief Storage size in bytes. */
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb);
 

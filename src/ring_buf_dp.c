@@ -182,6 +182,76 @@ int ring_buf_dp_get_finish(struct ring_buf_dp *rb, uint32_t len)
 	return ret;
 }
 
+int ring_buf_dp_second_enable(struct ring_buf_dp *rb)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	int ret = 0;
+
+	if (rb->second_enabled) {
+		ret = -EALREADY;
+	} else {
+		rb->tail2 = rb->tail;
+		rb->peek_claimed = 0U;
+		rb->second_enabled = true;
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return ret;
+}
+
+void ring_buf_dp_second_disable(struct ring_buf_dp *rb)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+
+	rb->second_enabled = false;
+	rb->peek_claimed = 0U;
+	k_spin_unlock(&rb->lock, key);
+}
+
+uint32_t ring_buf_dp_peek(struct ring_buf_dp *rb, uint8_t *data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t n = 0U;
+
+	if (rb->second_enabled && rb->peek_claimed == 0U) {
+		n = MIN(len, second_used_locked(rb));
+		copy_out(rb, rb->tail2, data, n);
+		rb->tail2 = idx_add(rb, rb->tail2, n);
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return n;
+}
+
+uint32_t ring_buf_dp_peek_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t off = idx_off(rb, rb->tail2);
+	uint32_t n = MIN(MIN(len, second_used_locked(rb)), rb->size - off);
+
+	*data = (n != 0U) ? &rb->buf[off] : NULL;
+	rb->peek_claimed = n;
+	k_spin_unlock(&rb->lock, key);
+	return n;
+}
+
+int ring_buf_dp_peek_finish(struct ring_buf_dp *rb, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	int ret = 0;
+
+	if (len > rb->peek_claimed) {
+		LOG_DBG("peek_finish %u > claimed %u", len, rb->peek_claimed);
+		ret = -EINVAL;
+	} else {
+		rb->tail2 = idx_add(rb, rb->tail2, len);
+		rb->peek_claimed = 0U;
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return ret;
+}
+
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb)
 {
 	return rb->size;

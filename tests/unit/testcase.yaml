@@ -1,0 +1,20 @@
+common:
+  tags:
+    - ring_buf_dp
+    - ztest
+  platform_allow:
+    - native_sim
+    - qemu_cortex_m3
+  integration_platforms:
+    - native_sim
+tests:
+  ring_buf_dp.unit:
+    extra_configs:
+      - CONFIG_RING_BUF_DP_LOG_LEVEL_DBG=y
+      - CONFIG_LOG=y
+  ring_buf_dp.unit.shell:
+    extra_configs:
+      - CONFIG_SHELL=y
+      - CONFIG_SHELL_BACKEND_SERIAL=n
+      - CONFIG_SHELL_BACKEND_DUMMY=y
+      - CONFIG_RING_BUF_DP_SHELL=y

@@ -1,0 +1,8 @@
+name: ring-buf-dp
+build:
+  cmake: .
+  kconfig: Kconfig
+samples:
+  - samples
+tests:
+  - tests

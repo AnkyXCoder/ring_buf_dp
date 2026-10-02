@@ -1,0 +1,31 @@
+# Copyright (c) 2026 Ankit Modi
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig RING_BUF_DP
+	bool "Double pointer ring buffer"
+	help
+	  Byte ring buffer with a zero-copy claim/finish API based on
+	  double pointers and an optional secondary (peek) reader.
+
+if RING_BUF_DP
+
+config RING_BUF_DP_SHELL
+	bool "Ring buffer shell commands (rbdp)"
+	depends on SHELL
+	help
+	  Adds the "rbdp" shell command set that drives a demo instance
+	  of the ring buffer.
+
+config RING_BUF_DP_SHELL_BUF_SIZE
+	int "Size in bytes of the shell demo buffer"
+	default 64
+	range 2 4096
+	depends on RING_BUF_DP_SHELL
+	help
+	  Size of the backing storage used by the "rbdp" shell commands.
+
+module = RING_BUF_DP
+module-str = Double pointer ring buffer
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # RING_BUF_DP

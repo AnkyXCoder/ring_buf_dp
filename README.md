@@ -96,14 +96,6 @@ uart:~$ rbdp put hello
 uart:~$ rbdp info
 ```
 
-## Documentation
-
-Diagrams in `docs/*.md` are PlantUML. Regenerate the images with:
-
-```sh
-python3 docs/render_diagrams.py
-```
-
 ## License
 
 Apache-2.0, see [LICENSE](LICENSE).

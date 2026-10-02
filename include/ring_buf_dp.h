@@ -68,6 +68,24 @@ int ring_buf_dp_init(struct ring_buf_dp *rb, uint8_t *buf, uint32_t size);
 /** @brief Drop all data and outstanding claims. The secondary reader stays enabled if it was. */
 void ring_buf_dp_reset(struct ring_buf_dp *rb);
 
+/**
+ * @brief Copy data into the buffer.
+ *
+ * Writes as many bytes as fit. Returns 0 while a put claim is outstanding.
+ *
+ * @return Number of bytes written.
+ */
+uint32_t ring_buf_dp_put(struct ring_buf_dp *rb, const uint8_t *data, uint32_t len);
+
+/**
+ * @brief Copy data out of the buffer for the primary reader and consume it.
+ *
+ * Returns 0 while a get claim is outstanding.
+ *
+ * @return Number of bytes read.
+ */
+uint32_t ring_buf_dp_get(struct ring_buf_dp *rb, uint8_t *data, uint32_t len);
+
 /** @brief Storage size in bytes. */
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb);
 

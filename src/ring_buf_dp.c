@@ -47,6 +47,24 @@ static inline uint32_t space_locked(const struct ring_buf_dp *rb)
 	return rb->size - MAX(used_locked(rb), second_used_locked(rb));
 }
 
+static void copy_in(const struct ring_buf_dp *rb, uint32_t idx, const uint8_t *src, uint32_t n)
+{
+	uint32_t off = idx_off(rb, idx);
+	uint32_t first = MIN(n, rb->size - off);
+
+	memcpy(&rb->buf[off], src, first);
+	memcpy(rb->buf, src + first, n - first);
+}
+
+static void copy_out(const struct ring_buf_dp *rb, uint32_t idx, uint8_t *dst, uint32_t n)
+{
+	uint32_t off = idx_off(rb, idx);
+	uint32_t first = MIN(n, rb->size - off);
+
+	memcpy(dst, &rb->buf[off], first);
+	memcpy(dst + first, rb->buf, n - first);
+}
+
 int ring_buf_dp_init(struct ring_buf_dp *rb, uint8_t *buf, uint32_t size)
 {
 	if (rb == NULL || buf == NULL || size == 0U || size > RING_BUF_DP_MAX_SIZE) {
@@ -70,6 +88,40 @@ void ring_buf_dp_reset(struct ring_buf_dp *rb)
 	rb->get_claimed = 0U;
 	rb->peek_claimed = 0U;
 	k_spin_unlock(&rb->lock, key);
+}
+
+uint32_t ring_buf_dp_put(struct ring_buf_dp *rb, const uint8_t *data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t n = 0U;
+
+	if (rb->put_claimed == 0U) {
+		n = MIN(len, space_locked(rb));
+		copy_in(rb, rb->head, data, n);
+		rb->head = idx_add(rb, rb->head, n);
+	} else {
+		LOG_DBG("put rejected, claim outstanding");
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return n;
+}
+
+uint32_t ring_buf_dp_get(struct ring_buf_dp *rb, uint8_t *data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t n = 0U;
+
+	if (rb->get_claimed == 0U) {
+		n = MIN(len, used_locked(rb));
+		copy_out(rb, rb->tail, data, n);
+		rb->tail = idx_add(rb, rb->tail, n);
+	} else {
+		LOG_DBG("get rejected, claim outstanding");
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return n;
 }
 
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb)

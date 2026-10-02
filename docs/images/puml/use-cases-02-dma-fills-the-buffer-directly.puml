@@ -1,0 +1,25 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "Application" as A
+participant "ring_buf_dp" as R
+participant "DMA" as D
+participant "Consumer" as C
+
+A -> R : put_claim(&p, 128)
+R --> A : 128, p -> storage[head]
+A -> D : reload(p, 128), start
+
+C -> R : get_claim(&q, 128)
+R --> C : 0 (data not committed yet)
+
+D -> D : writes 128 bytes into storage
+D -> A : done callback
+A -> R : put_finish(128)
+R --> A : 0
+
+C -> R : get_claim(&q, 128)
+R --> C : 128, q -> storage[tail]
+@enduml

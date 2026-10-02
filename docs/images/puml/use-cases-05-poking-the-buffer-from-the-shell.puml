@@ -1,0 +1,23 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+actor User
+participant "rbdp shell" as SH
+participant "ring_buf_dp" as R
+
+User -> SH : rbdp claim_put 8
+SH -> R : put_claim(&p, 8)
+R --> SH : 8
+SH -> SH : fill p[0..7]
+User -> SH : rbdp info
+SH --> User : used 0 (not committed)
+User -> SH : rbdp finish_put 8
+SH -> R : put_finish(8)
+User -> SH : rbdp claim_get 8
+SH -> R : get_claim(&p, 8)
+SH --> User : hex dump of 8 bytes
+User -> SH : rbdp finish_get 8
+SH -> R : get_finish(8)
+@enduml

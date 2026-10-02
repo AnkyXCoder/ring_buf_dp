@@ -1,0 +1,20 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "Parser" as P
+participant "ring_buf_dp" as R
+
+P -> R : get_claim(&p, MAX)
+R --> P : 9, p -> storage[tail]
+P -> P : header says packet = 6 bytes\n9 >= 6, packet complete
+P -> P : on_packet(...)
+P -> R : get_finish(6)
+
+P -> R : get_claim(&p, MAX)
+R --> P : 3
+P -> P : header says packet = 8 bytes\n3 < 8, incomplete
+P -> R : get_finish(0)
+note right of P : bytes stay in the buffer\nuntil more data arrives
+@enduml

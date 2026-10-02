@@ -1,0 +1,22 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "Producer" as P
+participant "Consumer" as C
+participant "Tap" as S
+participant "ring_buf_dp" as R
+
+S -> R : second_enable()
+P -> R : put(data, 16)
+C -> R : get(buf, 16)
+R --> C : 16
+R -> R : tail = 16, tail2 = 0\nspace still 48 of 64 (tap holds 16)
+
+S -> R : peek_claim(&p, 32)
+R --> S : 16, p -> storage[tail2]
+S -> S : LOG_HEXDUMP_INF(p, 16)
+S -> R : peek_finish(16)
+R -> R : tail2 = 16, space is 64 again
+@enduml

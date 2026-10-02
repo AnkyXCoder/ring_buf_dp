@@ -1,0 +1,20 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "UART ISR" as ISR
+participant "ring_buf_dp" as R
+participant "RX thread" as T
+
+ISR -> R : put(chunk, 16)
+R --> ISR : 16
+ISR -> R : put(chunk, 7)
+R --> ISR : 7
+
+T -> R : get_claim(&p, 64)
+R --> T : 23, p -> storage[tail]
+T -> T : handle_bytes(p, 23)\n(no copy)
+T -> R : get_finish(23)
+R --> T : 0
+@enduml

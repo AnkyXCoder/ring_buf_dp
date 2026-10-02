@@ -1,0 +1,47 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam shadowing false
+left to right direction
+
+package "Application" {
+  [Producer\n(ISR / thread)] as P
+  [Primary Consumer\n(thread)] as C
+  [Secondary Reader\n(monitor / logger)] as S
+  [Shell user] as U
+}
+
+package "ring_buf_dp module" {
+  [Public API\nring_buf_dp.h] as API
+  package "Core (ring_buf_dp.c)" {
+    [Copy API\nput / get / peek] as COPY
+    [Zero-copy API\nclaim / finish\n(uint8_t **)] as ZC
+    [Index & Space Manager\nhead, tail, tail2] as IDX
+    [Lock\nk_spinlock] as LK
+  }
+  [Shell commands\nshell_ring_buf_dp.c] as SH
+}
+
+package "Zephyr" {
+  [Kernel\nspinlock, threads] as K
+  [Shell subsystem] as ZS
+  [Logging] as LOG
+}
+
+database "Backing storage\nuint8_t buf[size]" as BUF
+
+P --> API
+C --> API
+S --> API
+U --> ZS
+ZS --> SH
+SH --> API
+API --> COPY
+API --> ZC
+COPY --> IDX
+ZC --> IDX
+IDX --> LK
+LK --> K
+IDX --> BUF : data access
+ZC ..> BUF : returns pointers\ninto buffer
+COPY ..> LOG
+@enduml

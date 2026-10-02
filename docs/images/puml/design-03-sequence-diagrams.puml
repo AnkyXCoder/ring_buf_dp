@@ -1,0 +1,28 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "Producer" as P
+participant "ring_buf_dp" as R
+database "buf[]" as B
+
+== Pass 1: contiguous segment up to buffer end ==
+P -> R : put_claim(&ptr, 100)
+R -> R : lock; compute contiguous space\n(end of buffer reached at 60)
+R --> P : returns 60, ptr -> &buf[head % size]
+P -> B : write 60 bytes via ptr
+P -> R : put_finish(60)
+R -> R : head += 60; clear claim
+
+== Pass 2: wrapped segment ==
+P -> R : put_claim(&ptr, 40)
+R --> P : returns 40, ptr -> &buf[0]
+P -> B : write 40 bytes via ptr
+P -> R : put_finish(40)
+R -> R : head += 40
+
+== Error path ==
+P -> R : put_finish(999)
+R --> P : -EINVAL (more than claimed)
+@enduml

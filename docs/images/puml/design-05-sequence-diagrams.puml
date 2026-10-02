@@ -1,0 +1,30 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+actor User
+participant "Zephyr Shell" as SH
+participant "shell_ring_buf_dp" as CMD
+participant "ring_buf_dp" as R
+
+User -> SH : rbdp claim_put 8
+SH -> CMD : cmd_claim_put(8)
+CMD -> R : put_claim(&ptr, 8)
+R --> CMD : 8
+CMD --> User : "claimed 8 bytes"
+
+User -> SH : rbdp finish_put 8
+SH -> CMD : cmd_finish_put(8)
+CMD -> R : put_finish(8)
+R --> CMD : 0
+CMD --> User : "committed, used=8"
+
+User -> SH : rbdp peek 8
+CMD -> R : peek(...)
+CMD --> User : hex dump (secondary reader)
+
+User -> SH : rbdp info
+CMD -> R : size / used / space / tail / tail2
+CMD --> User : status table
+@enduml

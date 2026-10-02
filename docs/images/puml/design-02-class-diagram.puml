@@ -1,0 +1,79 @@
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+class ring_buf_dp <<struct>> {
+  - buf : uint8_t *
+  - size : uint32_t
+  - head : uint32_t
+  - tail : uint32_t
+  - tail2 : uint32_t
+  - put_claimed : uint32_t
+  - get_claimed : uint32_t
+  - peek_claimed : uint32_t
+  - second_enabled : bool
+  - lock : struct k_spinlock
+}
+
+class "Lifecycle API" as LC <<functions>> {
+  + ring_buf_dp_init(rb, buf, size) : int
+  + ring_buf_dp_reset(rb) : void
+  + RING_BUF_DP_DECLARE(name, size)
+}
+
+class "Copy API" as CP <<functions>> {
+  + ring_buf_dp_put(rb, data, len) : uint32_t
+  + ring_buf_dp_get(rb, data, len) : uint32_t
+  + ring_buf_dp_peek(rb, data, len) : uint32_t   // secondary reader
+}
+
+class "Zero-copy API (double pointer)" as ZC <<functions>> {
+  + ring_buf_dp_put_claim(rb, **data, len) : uint32_t
+  + ring_buf_dp_put_finish(rb, len) : int
+  + ring_buf_dp_get_claim(rb, **data, len) : uint32_t
+  + ring_buf_dp_get_finish(rb, len) : int
+}
+
+class "Secondary reader API" as SR <<functions>> {
+  + ring_buf_dp_second_enable(rb) : int
+  + ring_buf_dp_second_disable(rb) : void
+  + ring_buf_dp_peek_claim(rb, **data, len) : uint32_t
+  + ring_buf_dp_peek_finish(rb, len) : int
+}
+
+class "Status API" as ST <<functions>> {
+  + ring_buf_dp_size_get(rb) : uint32_t
+  + ring_buf_dp_size_used(rb) : uint32_t
+  + ring_buf_dp_second_size_used(rb) : uint32_t
+  + ring_buf_dp_space_get(rb) : uint32_t
+  + ring_buf_dp_is_empty(rb) : bool
+  + ring_buf_dp_is_full(rb) : bool
+}
+
+class "Shell (rbdp)" as SHL <<module>> {
+  info, put, get, peek
+  claim_put, finish_put
+  claim_get, finish_get
+  reset
+}
+
+LC ..> ring_buf_dp : creates / resets
+CP ..> ring_buf_dp : uses
+ZC ..> ring_buf_dp : uses
+SR ..> ring_buf_dp : uses
+ST ..> ring_buf_dp : reads
+SHL ..> CP
+SHL ..> ZC
+SHL ..> SR
+SHL ..> ST
+
+note right of ring_buf_dp
+  Indices live in [0, 2*size).
+  used  = dist(head, tail)
+  used2 = dist(head, tail2)  (enabled only)
+  space = size - max(used, used2)
+  Writable space is bounded by the
+  slowest enabled reader.
+end note
+@enduml

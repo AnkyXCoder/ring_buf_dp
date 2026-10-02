@@ -1,0 +1,33 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "Producer" as P
+participant "Primary\nConsumer" as C
+participant "Secondary\nReader" as S
+participant "ring_buf_dp" as R
+
+S -> R : second_enable()
+R -> R : tail2 = tail
+
+P -> R : put(data, 32)
+R --> P : 32 (head = 32)
+
+S -> R : peek_claim(&p2, 32)
+R --> S : 32, p2 -> &buf[tail2]
+S -> S : inspect / log bytes
+S -> R : peek_finish(32)
+R -> R : tail2 = 32\n(space NOT freed, tail still 0)
+
+C -> R : get_claim(&p1, 32)
+R --> C : 32, p1 -> &buf[tail]
+C -> C : process bytes
+C -> R : get_finish(32)
+R -> R : tail = 32\nfree space = size - (head - min(tail, tail2))
+
+note over R
+  Space is reclaimed only when BOTH
+  readers have moved past the bytes.
+end note
+@enduml

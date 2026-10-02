@@ -86,6 +86,47 @@ uint32_t ring_buf_dp_put(struct ring_buf_dp *rb, const uint8_t *data, uint32_t l
  */
 uint32_t ring_buf_dp_get(struct ring_buf_dp *rb, uint8_t *data, uint32_t len);
 
+/**
+ * @brief Claim contiguous writable space inside the storage (zero-copy write).
+ *
+ * The region ends at the end of the storage, so a wrapped write needs two
+ * claim/finish passes. A new claim supersedes an unfinished one.
+ *
+ * @param rb   Ring buffer.
+ * @param data Set to the start of the claimed region, NULL if nothing is claimed.
+ * @param len  Requested size in bytes.
+ *
+ * @return Number of bytes claimed, may be less than @p len.
+ */
+uint32_t ring_buf_dp_put_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len);
+
+/**
+ * @brief Commit bytes written into a region from ring_buf_dp_put_claim().
+ *
+ * @retval 0 on success.
+ * @retval -EINVAL if @p len exceeds the claimed size.
+ */
+int ring_buf_dp_put_finish(struct ring_buf_dp *rb, uint32_t len);
+
+/**
+ * @brief Claim contiguous readable data for the primary reader (zero-copy read).
+ *
+ * @param rb   Ring buffer.
+ * @param data Set to the start of the claimed region, NULL if nothing is claimed.
+ * @param len  Requested size in bytes.
+ *
+ * @return Number of bytes claimed, may be less than @p len.
+ */
+uint32_t ring_buf_dp_get_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len);
+
+/**
+ * @brief Consume bytes from a region obtained with ring_buf_dp_get_claim().
+ *
+ * @retval 0 on success.
+ * @retval -EINVAL if @p len exceeds the claimed size.
+ */
+int ring_buf_dp_get_finish(struct ring_buf_dp *rb, uint32_t len);
+
 /** @brief Storage size in bytes. */
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb);
 

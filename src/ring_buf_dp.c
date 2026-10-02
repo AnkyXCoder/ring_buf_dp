@@ -124,6 +124,64 @@ uint32_t ring_buf_dp_get(struct ring_buf_dp *rb, uint8_t *data, uint32_t len)
 	return n;
 }
 
+uint32_t ring_buf_dp_put_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t off = idx_off(rb, rb->head);
+	uint32_t n = MIN(MIN(len, space_locked(rb)), rb->size - off);
+
+	*data = (n != 0U) ? &rb->buf[off] : NULL;
+	rb->put_claimed = n;
+	k_spin_unlock(&rb->lock, key);
+	return n;
+}
+
+int ring_buf_dp_put_finish(struct ring_buf_dp *rb, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	int ret = 0;
+
+	if (len > rb->put_claimed) {
+		LOG_DBG("put_finish %u > claimed %u", len, rb->put_claimed);
+		ret = -EINVAL;
+	} else {
+		rb->head = idx_add(rb, rb->head, len);
+		rb->put_claimed = 0U;
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return ret;
+}
+
+uint32_t ring_buf_dp_get_claim(struct ring_buf_dp *rb, uint8_t **data, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	uint32_t off = idx_off(rb, rb->tail);
+	uint32_t n = MIN(MIN(len, used_locked(rb)), rb->size - off);
+
+	*data = (n != 0U) ? &rb->buf[off] : NULL;
+	rb->get_claimed = n;
+	k_spin_unlock(&rb->lock, key);
+	return n;
+}
+
+int ring_buf_dp_get_finish(struct ring_buf_dp *rb, uint32_t len)
+{
+	k_spinlock_key_t key = k_spin_lock(&rb->lock);
+	int ret = 0;
+
+	if (len > rb->get_claimed) {
+		LOG_DBG("get_finish %u > claimed %u", len, rb->get_claimed);
+		ret = -EINVAL;
+	} else {
+		rb->tail = idx_add(rb, rb->tail, len);
+		rb->get_claimed = 0U;
+	}
+
+	k_spin_unlock(&rb->lock, key);
+	return ret;
+}
+
 uint32_t ring_buf_dp_size_get(const struct ring_buf_dp *rb)
 {
 	return rb->size;
